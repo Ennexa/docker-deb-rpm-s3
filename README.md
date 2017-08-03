@@ -6,8 +6,8 @@ Most of the code was extracted from the [elastic/beats repository](https://githu
 
 The image includes the following projects
 
-- [deb-s3)(https://github.com/krobertson/deb-s3) for APT
-- (rpm-s3)(https://github.com/crohr/rpm-s3) for YUM
+- [deb-s3](https://github.com/krobertson/deb-s3) for APT
+- [rpm-s3](https://github.com/crohr/rpm-s3) for YUM
 
 ### Usage
 
@@ -78,13 +78,12 @@ Now to upload the files to our new repository, run
 HTTP Basic auth is used to prevent unauthorized access to the REST server. The default username / password is `admin`/`secret`. To change it, create a file named `config.json` under `./conf` with the following content.
 
 ```
- {
-    auth_backends: {
-        'predefined': {
-                users: {
-                        admin: '$2a$10$iqJSHD.BGr0E2IxQwYgJmeP3NvhPrXAeLSaGCj6IR/XU5QtjVu5Tm',
-                        bob: '<encrypted password hash>'
-                }
+{
+    "auth_backends": {
+        "predefined": {
+            "users": {
+                "bob": "<password hash>"
+            }
         }
     }
 }
