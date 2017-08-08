@@ -6,9 +6,10 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
 VOLUME /data/incoming
 VOLUME /data/conf
 
-COPY app /app
-
+ADD app/package.json /app/package.json
 RUN cd /app && npm install
+
+COPY app/* /app/
 
 WORKDIR "/app"
 ENTRYPOINT ["nodejs", "index.js"]
