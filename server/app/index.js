@@ -39,7 +39,16 @@ try {
 console.log(JSON.stringify(config, 2));
 
 // Create a server with a host and port
-const server = new Hapi.Server()
+const server = new Hapi.Server({
+    connections: {
+      routes: {
+        timeout: {
+          server: 3600000,
+          socket: 3600001
+        }
+      }
+    }
+})
 server.connection({
   host: config.host,
   port: config.port
