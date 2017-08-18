@@ -3,6 +3,9 @@
 # Expect wrapper for rpm-s3 that provides the GPG signing password
 # when prompted.
 
+# Wait upto 1 hour
+set timeout 3600
+
 spawn rpm-s3 \
         -vv \
         --sign \
