@@ -1,0 +1,11 @@
+{
+    "auth_backends": {
+        "predefined": {
+            "users": {
+                "admin": "$2a$10$iqJSHD.BGr0E2IxQwYgJmeP3NvhPrXAeLSaGCj6IR/XU5QtjVu5Tm"
+            }
+        }
+    },
+    "stage": "dev",
+    "endpoint": "repo.example.com"
+}

@@ -1,0 +1,211 @@
+service: deb-rpm-s3
+plugins:
+  - serverless-domain-manager
+custom:
+  accountId: 309738069059
+  domainName: ${file(config.json):endpoint}
+  stage: ${file(config.json):stage}
+  bucketName: ${self:custom.stage}-${self:custom.domainName}
+  prefix: ${self:custom.stage}-${self:service}
+  process: ${self:custom.prefix}-process
+  customDomain:
+      basePath: ""
+      domainName: ${self:custom.domainName}
+      stage: ${self:custom.stage}
+      createRoute53Record: true
+provider:
+  name: aws
+  runtime: nodejs6.10
+  memorySize: 128
+  timeout: 3
+  stage: ${file(config.json):stage}
+  region: us-east-1
+  # role: arn:aws:iam::${self:custom.accountId}:role/s3ProxyRole
+  # versionFunctions: false
+  # custom:
+  #   setup: ${file(vars.js):setup} #initializes the variables which adds to environment variables
+  environment:
+    BUCKET_NAME: ${self:custom.bucketName}
+    STAGE: ${self:custom.bucketName}
+  stackTags:
+   Environment: ${self:custom.stage}    
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+      Resource: arn:aws:lambda:*:*:function:${self:custom.process}
+    - Effect: Allow
+      Action:
+        - "s3:List*"
+        - "s3:Get*"
+      Resource: 
+        Fn::GetAtt:
+          - s3filesbucket
+          - Arn
+resources:
+  Resources:
+    uploadUser:
+      Type: "AWS::IAM::User"
+      Properties: 
+        UserName: ${self:custom.prefix}-upload-user
+    uploadPolicy:
+      Type: "AWS::IAM::Policy"
+      Properties: 
+        PolicyName: ${self:custom.prefix}-upload-policy
+        Users:
+          - Ref: uploadUser
+        PolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:ListBucket"
+                - "s3:GetBucketAcl"
+              Resource:
+                Fn::GetAtt:
+                  - s3filesbucket
+                  - Arn
+            - Effect: "Allow"
+              Action:
+                - "s3:Get*"
+                - "s3:List*"
+                - "s3:Put*"
+                - "s3:Delete*"
+              Resource:
+                Fn::Join:
+                  - ""
+                  -
+                    - Fn::GetAtt:
+                      - s3filesbucket
+                      - Arn
+                    - "/*"
+    ApiGatewayRestApi: 
+      Type: "AWS::ApiGateway::RestApi"
+      Properties:
+        Name: ${self:custom.prefix}
+        BinaryMediaTypes:
+          - '*/*'
+    # GatewayResponse:
+    #   Type: 'AWS::ApiGateway::GatewayResponse'
+    #   Properties:
+    #     ResponseParameters:
+    #       gatewayresponse.header.WWW-Authenticate: 'Basic realm="Packages"'
+    #     ResponseType: UNAUTHORIZED
+    #     RestApiId: 
+    #       Ref: ApiGatewayRestApi
+    s3filesbucket:
+      Type: 'AWS::S3::Bucket'
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        VersioningConfiguration:
+          Status: Suspended
+        Tags:
+          - Key: Environment
+            Value: ${self:custom.stage}
+    s3ProxyResource:
+      Type: "AWS::ApiGateway::Resource"
+      Properties:
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ParentId:
+          Fn::GetAtt:
+            - ApiGatewayRestApi
+            - "RootResourceId"
+        PathPart: "{proxy+}"
+    s3ProxyGetMethod:
+      Type: "AWS::ApiGateway::Method"
+      Properties:
+        ApiKeyRequired: false
+        AuthorizationType: CUSTOM
+        AuthorizerId:
+          Ref: AuthApiGatewayAuthorizer
+        HttpMethod: GET
+        Integration:
+          Credentials: arn:aws:iam::${self:custom.accountId}:role/s3ProxyRole
+          IntegrationHttpMethod: GET
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters:
+                method.response.header.Timestamp: integration.response.header.Date
+                method.response.header.Content-Type: integration.response.header.Content-Type
+                # method.response.header.Content-Length: integration.response.header.Content-Length
+                method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+            - StatusCode: 400
+              SelectionPattern: "400"
+              ResponseParameters:
+                method.response.header.Content-Type: integration.response.header.Content-Type
+                method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+            - StatusCode: 404
+              SelectionPattern: "404"
+              ResponseParameters:
+                method.response.header.Content-Type: integration.response.header.Content-Type
+                method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+            - StatusCode: 500
+              SelectionPattern: '5\d{2}'
+              ResponseParameters:
+                method.response.header.Content-Type: integration.response.header.Content-Type
+                method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+          PassthroughBehavior: WHEN_NO_MATCH
+          RequestParameters:
+            integration.request.header.Content-Disposition: method.request.header.Content-Disposition
+            integration.request.header.Content-Type: method.request.header.Content-Type
+            integration.request.header.x-amz-acl: "'authenticated-read'"
+            integration.request.header.Expect: "'100-continue'"
+            integration.request.path.proxy: method.request.path.proxy
+          Type: AWS
+          Uri: arn:aws:apigateway:us-east-1:s3:path/${self:custom.bucketName}/{proxy}
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Timestamp: integration.response.header.Date
+              # method.response.header.Content-Length: integration.response.header.Content-Length
+              method.response.header.Content-Type: integration.response.header.Content-Type
+              method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+          - StatusCode: 400
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
+              method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+          - StatusCode: 404
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
+              method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+          - StatusCode: 500
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
+              method.response.header.Content-Disposition: integration.response.header.Content-Disposition
+        RequestParameters:
+          method.request.header.Timestamp: false
+          # method.request.header.Content-Length: false
+          method.request.header.Content-Disposition: false
+          method.request.header.Content-Type: false
+          method.request.header.x-amz-acl: false
+          method.request.path.proxy: false
+        ResourceId:
+          # Fn::GetAtt:
+          #   - "s3Proxy"
+          #   - "RootResourceId"
+          Ref: s3ProxyResource
+        RestApiId:
+          Ref: ApiGatewayRestApi
+    ApiGatewayDeploymentthisiswhatiwillreplace:
+      Type: 'AWS::ApiGateway::Deployment'
+      Properties:
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        StageName: ${self:custom.stage}
+      DependsOn:
+        - s3ProxyGetMethod
+package:
+ include:
+    - handler.js
+functions:
+  index:
+    timeout: 10
+    handler: handler.index
+    events:
+      - http:
+          path: "/"
+          method: get
+          authorizer: auth
+  auth:
+    handler: handler.auth
