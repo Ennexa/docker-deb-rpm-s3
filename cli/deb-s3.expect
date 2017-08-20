@@ -10,7 +10,9 @@ spawn deb-s3 upload \
         --sign \
         --preserve_versions \
         --bucket "$env(BUCKET)" \
-        --prefix "$env(PREFIX)/apt" \
+        --visibility private \
+        --s3-region "$env(AWS_REGION)" \
+        --prefix "$env(BASE_PATH)apt" \
         --arch $env(arch) \
         -o "$env(ORIGIN)" \
         {*}$argv

@@ -122,10 +122,10 @@ parseArgs() {
     exit 1
   fi
 
-  if [ -z "$PREFIX" ]; then
-    err "-p=PREFIX or --prefix=PREFIX is required."
-    exit 1
-  fi
+  # if [ -z "$PREFIX" ]; then
+  #   err "-p=PREFIX or --prefix=PREFIX is required."
+  #   exit 1
+  # fi
 
   if [ -z "$AWS_ACCESS_KEY" ]; then
     err "--access-key-id=AWS_ACCESS_KEY is required."
@@ -137,9 +137,18 @@ parseArgs() {
     exit 1
   fi
 
+  if [ -z "$PREFIX" ]; then
+    BASE_PATH=""
+  else
+    BASE_PATH="${PREFIX}/"
+  fi
+
+  AWS_REGION=${AWS_REGION:-us-east-1}
+
   export BUCKET
   export ORIGIN 
-  export PREFIX
+  export BASE_PATH
+  export AWS_REGION
   export AWS_ACCESS_KEY
   export AWS_SECRET_KEY
 }
@@ -183,7 +192,7 @@ publishToAptRepo() {
   debug "Entering publishToAptRepo"
 
   # Verify the repository and credentials before continuing.
-  deb-s3 verify --bucket "$BUCKET" --prefix "${PREFIX}/apt"
+  deb-s3 verify --s3-region "$AWS_REGION" --bucket "$BUCKET" --prefix "${BASE_PATH}apt"
 
   for arch in i386 amd64
   do
