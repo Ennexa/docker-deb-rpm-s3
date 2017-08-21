@@ -38,8 +38,6 @@ try {
   console.log(e);
 }
 
-console.log(config)
-
 // Create a server with a host and port
 const server = new Hapi.Server({
     connections: {

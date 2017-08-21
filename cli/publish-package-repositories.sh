@@ -208,7 +208,7 @@ publishToAptRepo() {
   debug "Entering publishToAptRepo"
 
   # Verify the repository and credentials before continuing.
-  deb-s3 verify --s3-region "$AWS_REGION" --bucket "$BUCKET" --prefix "${BASE_PATH}apt"
+  deb-s3 verify --bucket "$BUCKET" --prefix "${BASE_PATH}apt"
 
   for arch in i386 amd64
   do
