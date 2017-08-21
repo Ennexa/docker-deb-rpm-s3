@@ -34,7 +34,7 @@ function generatePolicy(principalId, effect, resource) {
                         "s3:Get*",
                         "s3:List*"
                     ],
-                    Resource: "arn:aws:s3:::${bucketName}"
+                    Resource: `arn:aws:s3:::${bucketName}/*`
                 }
             ]
         };
