@@ -9,12 +9,12 @@ set timeout 3600
 spawn deb-s3 upload \
         --sign \
         --preserve_versions \
-        --bucket "$env(BUCKET)" \
-        --visibility private \
-        --s3-region "$env(AWS_REGION)" \
-        --prefix "$env(BASE_PATH)apt" \
+        --bucket $env(BUCKET) \
+        --visibility $env(VISIBILITY_DEB_S3) \
+        --s3-region $env(AWS_REGION) \
+        --prefix $env(BASE_PATH)apt \
         --arch $env(arch) \
-        -o "$env(ORIGIN)" \
+        -o $env(ORIGIN) \
         {*}$argv
 expect {
   "Enter passphrase: " {

@@ -11,6 +11,7 @@ spawn rpm-s3 \
         --sign \
         --region=$env(AWS_REGION) \
         --keep=500 \
+        --visibility=$env(VISIBILITY_RPM_S3) \
         --bucket=$env(BUCKET) \
         --repopath=$env(BASE_PATH)yum/el/$env(arch) \
         {*}$argv

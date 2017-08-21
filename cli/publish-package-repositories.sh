@@ -28,11 +28,14 @@ cat << EOF
 
     -b=BUCKET | --bucket=BUCKET      Required. The S3 bucket in which to publish.
 
-    -p=PREFIX | --prefix=PREFIX      Required. Path to prefix to all published
-                                     repositories.
-
     -d=DIR | --directory=DIR         Required. Directory to recursively search
                                      for .rpm and .deb files.
+
+    --visibility=VISIBILITY          Optional. The access policy for the uploaded files. Can be public, private, or authenticated.
+                                     Default: public
+
+    -p=PREFIX | --prefix=PREFIX      Optional. Path to prefix to all published
+                                     repositories.
 
     -g=GPG_KEY | --gpg-key=GPG_KEY   Optional. Path to GPG key file to import.
 
@@ -91,6 +94,10 @@ parseArgs() {
       ORIGIN="${i#*=}"
       shift
       ;;
+    --visibility=*)
+      VISIBILITY="${i#*=}"
+      shift
+      ;;
     -p=*|--prefix=*)
       PREFIX="${i#*=}"
       shift
@@ -144,6 +151,13 @@ parseArgs() {
   fi
 
   AWS_REGION=${AWS_REGION:-us-east-1}
+  VISIBILITY_DEB_S3=${VISIBILITY:-public}
+  
+  if [ "$VISIBILITY" == "public" ]; then
+      VISIBILITY_RPM_S3=public-read
+  else
+      VISIBILITY_RPM_S3=$VISIBILITY
+  fi
 
   export BUCKET
   export ORIGIN 
@@ -151,6 +165,8 @@ parseArgs() {
   export AWS_REGION
   export AWS_ACCESS_KEY
   export AWS_SECRET_KEY
+  export VISIBILITY_DEB_S3
+  export VISIBILITY_RPM_S3
 }
 
 importGpg() {
