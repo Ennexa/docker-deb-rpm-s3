@@ -96,3 +96,8 @@ You can use an online service like https://bcrypt-generator.com/ for generating 
 
 You can install the packages by using public url of your S3 bucket.
 
+#### Running a protected repository
+
+You can run a private repository protected with HTTP basic auth. The `serverless` configuration in `serverless-s3-proxy` can be used to setup up an http authentication proxy for the S3 bucket. Also, add the `--visibility=private` flag to the docker run command to ensure that the uploaded files are not privately accessible.
+
+
