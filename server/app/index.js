@@ -139,9 +139,7 @@ class UpdateServer {
         this.config = {
           auth_backends: {
             'predefined': {
-              users: {
-                admin: '$2a$10$iqJSHD.BGr0E2IxQwYgJmeP3NvhPrXAeLSaGCj6IR/XU5QtjVu5Tm'
-              }
+              users: {}
             }
           },
           host: '0.0.0.0',

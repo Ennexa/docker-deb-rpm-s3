@@ -1,0 +1,5 @@
+const bcrypt = require('bcryptjs')
+const hash = bcrypt.hashSync(process.argv[2], 10)
+
+console.log(hash)
+

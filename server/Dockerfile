@@ -19,4 +19,5 @@ VOLUME /data/incoming
 VOLUME /data/conf
 
 WORKDIR "/app"
-ENTRYPOINT ["nodejs", "index.js"]
+ENTRYPOINT ["nodejs"]
+CMD ["index.js"]

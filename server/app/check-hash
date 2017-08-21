@@ -1,0 +1,5 @@
+const bcrypt = require('bcryptjs')
+const status = bcrypt.checkSync(process.argv[2], process.argv[3])
+
+console.log(status ? 'OK' : 'MISMATCH')
+
