@@ -6,8 +6,7 @@ FROM debian:jessie
 RUN apt-get update
 RUN apt-get install -y git \
     rubygems ruby-dev patch gcc make zlib1g-dev rpm curl dpkg-sig \
-    yum python-deltarpm \
-    expect
+    yum python-deltarpm expect
 
 # Install python-boto from source to get latest version.
 RUN git clone git://github.com/boto/boto.git && \

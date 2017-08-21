@@ -102,6 +102,10 @@ parseArgs() {
       PREFIX="${i#*=}"
       shift
       ;;
+    -k=*|--key=*)
+      KEY_ID="${i#*=}"
+      shift
+      ;;
     -v|--verbose)
       VERBOSE=true
       shift
@@ -158,6 +162,18 @@ parseArgs() {
   else
       VISIBILITY_RPM_S3=$VISIBILITY
   fi
+  
+  VERBOSE_DEB_S3="--quiet"
+  VERBOSE_RPM_S3="-v"
+  
+  if [ "$VERBOSE" == "true" ]; then
+    VERBOSE_DEB_S3="--no-quiet"
+    VERBOSE_RPM_S3="-vv"
+  fi
+  
+  if [ -z "$KEY_ID" ]; then
+      KEY_ID=""
+  fi
 
   export BUCKET
   export ORIGIN 
@@ -167,6 +183,10 @@ parseArgs() {
   export AWS_SECRET_KEY
   export VISIBILITY_DEB_S3
   export VISIBILITY_RPM_S3
+  export VERBOSE_DEB_S3
+  export VERBOSE_RPM_S3
+  export KEY_ID
+  
 }
 
 importGpg() {

@@ -7,13 +7,13 @@
 set timeout 3600
 
 spawn rpm-s3 \
-        -vv \
         --sign \
         --region=$env(AWS_REGION) \
         --keep=500 \
         --visibility=$env(VISIBILITY_RPM_S3) \
         --bucket=$env(BUCKET) \
         --repopath=$env(BASE_PATH)yum/el/$env(arch) \
+        $env(VERBOSE_RPM_S3) \
         {*}$argv
 expect {
   "Enter passphrase: " {
