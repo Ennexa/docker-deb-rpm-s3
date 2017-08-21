@@ -5,6 +5,7 @@ const Basic = require('hapi-auth-basic')
 const spawn = require('child_process').spawn
 const fs = require('fs')
 const auth = require('./auth')
+const emptyDir = require('empty-dir');
 
 var config = {
   auth_backends: {
@@ -22,7 +23,8 @@ var config = {
   args: {
     'directory': '/data/incoming/',
     'gpg-key': '/data/conf/gpgkey.asc',
-    'verbose': true
+    'verbose': true,
+    'visibility': 'public'
   },
   debug: false
 }
@@ -36,7 +38,7 @@ try {
   console.log(e);
 }
 
-console.log(JSON.stringify(config, 2));
+console.log(config)
 
 // Create a server with a host and port
 const server = new Hapi.Server({
@@ -55,25 +57,25 @@ server.connection({
 })
 
 function updateRepo () {
+  if (config.debug) {
+      console.log("Running update repo")
+  }
   return new Promise((resolve, reject) => {
     const args = []
     let val, type;
     let stdout = '';
     let stderr = '';
-
-    ['bucket', 'directory', 'prefix', 'gpg-key', 'aws-access-key', 'aws-secret-key', 'verbose'].forEach((opt) => {
-      val = config.args[opt] || process.env[opt.replace(/-/g, '_').toUpperCase()]
+    
+    ['bucket', 'directory', 'prefix', 'gpg-key', 'aws-access-key', 'aws-secret-key', 'verbose', 'visibility'].forEach((opt) => {
+      val = opt in config.args ? config.args[opt] : process.env[opt.replace(/-/g, '_').toUpperCase()]
       type = typeof val
-
-      if (type === 'undefined') {
-        throw new Error(`Option '${opt}' should be specified either via config.json or environment variable`)
-      } else if (type === 'boolean') {
+      if (type === 'boolean') {
         val && args.push(`--${opt}`)
-      } else {
+      } else if (type !== 'undefined') {
         args.push(`--${opt}=${val}`)
       }
     })
-
+    
     const command = spawn('/publish-package-repositories.sh', args)
     if (config.debug) {
       console.log('Spawning /publish-package-repositories.sh with args ', args)
@@ -86,16 +88,12 @@ function updateRepo () {
     })
     command.stderr.on('data', (data) => {
       stderr += data.toString()
-      if (config.debug) {
-        console.log(stderr)
-      }
+      console.error(stderr)
     })
 
     command.on('close', (code) => {
       if (code) {
-        if (config.debug) {
-          console.log(`Command failed with code ${args}`)
-        }
+        console.error(`Command failed with code ${code}`)
         reject(stderr)
       } else {
         resolve(stdout)
@@ -106,6 +104,16 @@ function updateRepo () {
 
 server.register(Basic, (err) => {
   server.auth.strategy('simple', 'basic', { validateFunc: auth.validate })
+  const cleanup = () => {
+    if (config.debug) {
+        console.log("Cleaning up incoming directory")
+    }
+    emptyDir(config.directory, function (err, result) {
+      if (err) {
+        console.error("Failed to cleanup package directory", err)
+      }
+    })
+  }
   server.route({
     method: ['PUT', 'POST'],
     path: '/{pkg}',
@@ -121,18 +129,27 @@ server.register(Basic, (err) => {
     handler: (request, reply) => {
       const payload = request.payload
       const success = (response) => {
-        reply({status: 'ok', response: response})
+        cleanup();
+        reply({status: 'ok'})
       }
       const error = (response) => {
-        console.log(response)
-        reply({status: 'error', response: response})
+        console.error(response)
+        cleanup();
+        reply({status: 'error'})
       }
-      var file = fs.createWriteStream(`/data/incoming/${request.params.pkg}`)
-      payload.pipe(file)
+      if (config.debug) {
+        console.log("Received request", request.path)
+      }
+      try {
+          var file = fs.createWriteStream(`/data/incoming/${request.params.pkg}`)
+          payload.pipe(file)
 
-      file.on('finish', () => {
-        updateRepo().then(success).catch(error)
-      })
+          file.on('finish', () => {
+            updateRepo().then(success).catch(error)
+          })
+      } catch (e) {
+          error(e);
+      }
     }
   })
 })

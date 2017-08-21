@@ -5,6 +5,7 @@
   "main": "server.js",
   "dependencies": {
     "bcrypt": "^1.0.2",
+    "empty-dir": "^0.2.1",
     "hapi": "^16.5.0",
     "hapi-auth-basic": "^4.2.0"
   },
