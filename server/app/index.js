@@ -7,11 +7,11 @@ const fs = require('fs')
 const path = require('path');
 const auth = require('./auth')
 
-const inputDir = '/data/incoming'
+const dirMode = parseInt('0755', 8)
 
 class UpdateServer {
     
-    updateRepo() {
+    updateRepo(inputDir) {
         if (this.config.debug) {
             console.log("Running update repo")
         }
@@ -19,10 +19,13 @@ class UpdateServer {
           let val, type;
           let stdout = '';
           let stderr = '';
-    
-          const command = spawn('/publish-package-repositories.sh', this.args)
+          
+          const args = this.args.slice(0)
+          args.push(`--directory=${inputDir}`)
+          
+          const command = spawn('/publish-package-repositories.sh', args)
           if (this.config.debug) {
-            console.log('Spawning /publish-package-repositories.sh with args ', this.args)
+            console.log('Spawning /publish-package-repositories.sh with args ', args)
           }
           if (this.config.debug) {
             command.stdout.on('data', (data) => {
@@ -64,7 +67,7 @@ class UpdateServer {
           port: this.config.port
         })
 
-        const cleanup = () => {
+        const cleanup = (inputDir) => {
           if (debug) {
               console.log("Cleaning up incoming directory", inputDir)
           }
@@ -72,11 +75,14 @@ class UpdateServer {
             if (err) {
               console.error("Failed to cleanup package directory", err)
             }
-
+            var count = files.length;
             for (const file of files) {
-              fs.unlink(path.join(inputDir, file), err => {
+              fs.unlink(path.join(inputDir, file), (err) => {
                 if (err) {
-                  console.error("Failed to remove file ${file}", err)
+                  console.error(`Failed to remove file ${file}`, err)
+                }
+                if (--count === 0) {
+                    fs.rmdir(inputDir);
                 }
               });
             }
@@ -99,25 +105,32 @@ class UpdateServer {
             },
             handler: (request, reply) => {
               const payload = request.payload
+              const inputDir = `/data/incoming/${process.hrtime().join('-')}`
               const success = (response) => {
-                cleanup();
+                cleanup(inputDir);
                 reply({status: 'ok'})
               }
               const error = (response) => {
                 console.error("Error Encountered")
                 console.error(response)
-                cleanup();
+                cleanup(inputDir);
                 reply({status: 'error'})
               }
               if (debug) {
                 console.log("Received request", request.path)
               }
               try {
-                  var file = fs.createWriteStream(`/data/incoming/${request.params.pkg}`)
-                  payload.pipe(file)
+                  fs.mkdir(inputDir, dirMode, function (err) {
+                      if (err) {
+                          console.error(`Failed to create temporary directory - ${err}`)
+                          return
+                      }
+                      var file = fs.createWriteStream(`${inputDir}/${request.params.pkg}`)
+                      payload.pipe(file)
 
-                  file.on('finish', () => {
-                    this.updateRepo().then(success).catch(error)
+                      file.on('finish', () => {
+                        this.updateRepo(inputDir).then(success).catch(error)
+                      })
                   })
               } catch (e) {
                   error(e);
@@ -169,7 +182,7 @@ class UpdateServer {
     }
     
     constructor(userConfig) {
-        this.args = [`--directory=${inputDir}`]
+        this.args = []
         this.initConfig(userConfig)
     }
 }
@@ -178,7 +191,6 @@ try {
   const userConfig = require('/data/conf/config.json')
   const updateServer = new UpdateServer(userConfig);
   updateServer.start();
-  
 } catch (e) {
   console.error(e);
 }
