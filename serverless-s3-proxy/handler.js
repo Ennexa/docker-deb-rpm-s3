@@ -31,6 +31,14 @@ function generatePolicy(principalId, effect, resource) {
                 {
                     Effect: effect,
                     Action: [
+                        "s3:ListBucket",
+                        "s3:GetBucketAcl"
+                    ],
+                    Resource: `arn:aws:s3:::${bucketName}`
+                },
+                {
+                    Effect: effect,
+                    Action: [
                         "s3:Get*",
                         "s3:List*"
                     ],

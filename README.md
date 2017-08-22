@@ -75,29 +75,37 @@ Now to upload the files to our new repository, run
     curl -XPUT http://admin:secret@localhost:8000/mod-pagespeed-beta_current_x86_64.rpm --data-binary @mod-pagespeed-beta_current_x86_64.rpm
     curl -XPUT http://admin:secret@localhost:8000/mod-pagespeed-beta_current_amd64.deb --data-binary @mod-pagespeed-beta_current_amd64.deb
 
-HTTP Basic auth is used to prevent unauthorized access to the REST server. The default username / password is `admin`/`secret`. To change it, create a file named `config.json` under `./conf` with the following content.
+HTTP Basic auth is used to prevent unauthorized access to the REST server. To add your credentials create a file named `config.json` under `./conf` with the following content.
 
 ```
 {
     "auth_backends": {
         "predefined": {
             "users": {
-                "bob": "<password hash>"
+                "<username>": "<bcrypt hash>"
             }
         }
     }
 }
 ```
 
-You can use an online service like https://bcrypt-generator.com/ for generating the hash.
+A helper script is included for generating the bcrypt hash.
 
+```
+$ docker run docker.ennexa.org/ennexa/deb-rpm-s3:server gen-hash secret
+$2a$10$bbUwtsMPdb.gbMvW2DCyUuvivdVbvP8ljE5859IMYY6P8pO3LKbOy
+```
 
 #### Installing packages from the repository
 
 You can install the packages by using public url of your S3 bucket.
 
+sudo add-apt-repository "deb https://repo.example.com/apt stable main"
+
 #### Running a protected repository
 
-You can run a private repository protected with HTTP basic auth. The `serverless` configuration in `serverless-s3-proxy` can be used to setup up an http authentication proxy for the S3 bucket. Also, add the `--visibility=private` flag to the docker run command to ensure that the uploaded files are not privately accessible.
+You can run a private repository protected with HTTP basic auth. The `serverless` configuration in `serverless-s3-proxy` can be used to setup up an http authentication proxy for the S3 bucket. Also, add the `--visibility=private` flag to the docker run command to ensure that the uploaded files are not privately accessible. The configuration is based on [APIGatewayS3Proxy](https://github.com/maingi4/APIGatewayS3Proxy) by Sumit Maingi.
 
-
+```
+sudo add-apt-repository "deb https://admin:secret@repo.example.com/apt stable main"
+```
