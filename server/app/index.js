@@ -131,7 +131,7 @@ class UpdateServer {
                       file.on('finish', () => {
                         this.updateRepo(inputDir).then(success).catch(error)
                       })
-                  })
+                  }.bind(this))
               } catch (e) {
                   error(e);
               }
