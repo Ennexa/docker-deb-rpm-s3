@@ -1,13 +1,21 @@
 'use strict'
 
-const Hapi = require('hapi')
-const Basic = require('hapi-auth-basic')
+const Hapi = require('@hapi/hapi')
+const Basic = require('@hapi/basic')
 const spawn = require('child_process').spawn
 const fs = require('fs')
+const fsa = fs.promises;
 const path = require('path');
 const auth = require('./auth')
 
 const dirMode = parseInt('0755', 8)
+let userConfig;
+
+function log() {
+  if (userConfig.debug) {
+    console.log(...arguments);
+  }
+}
 
 class UpdateServer {
     
@@ -48,99 +56,90 @@ class UpdateServer {
         })
     }
     
-    start() {
+    async start() {
         // Create a server with a host and port
         const debug = this.debug
         const server = new Hapi.Server({
-            connections: {
-              routes: {
-                timeout: {
-                  server: 3600000,
-                  socket: 3600001
-                }
-              }
+          host: this.config.host,
+          port: this.config.port,
+          routes: {
+            timeout: {
+              server: 3600000,
+              socket: 3600001
             }
+          }
         })
     
-        server.connection({
-          host: this.config.host,
-          port: this.config.port
-        })
-
-        const cleanup = (inputDir) => {
+        const cleanup = async (inputDir) => {
           if (debug) {
               console.log("Cleaning up incoming directory", inputDir)
           }
-          fs.readdir(inputDir, (err, files) => {
-            if (err) {
-              console.error("Failed to cleanup package directory", err)
-            }
-            var count = files.length;
+          try {
+            const files = await fsa.readdir(inputDir);
             for (const file of files) {
-              fs.unlink(path.join(inputDir, file), (err) => {
-                if (err) {
-                  console.error(`Failed to remove file ${file}`, err)
-                }
-                if (--count === 0) {
-                    fs.rmdir(inputDir);
-                }
-              });
+              try {
+                await fsa.unlink(path.join(inputDir, file))
+              } catch (e) {
+                console.error(`Failed to remove file ${file}`, err)
+              }
             }
-          });
+            await fsa.rmdir(inputDir);
+          } catch (e) {
+            console.error("Failed to cleanup package directory", e)
+          }
         }
         
-        server.register(Basic, (err) => {
-          server.auth.strategy('simple', 'basic', { validateFunc: auth.validate })
-          server.route({
-            method: ['PUT', 'POST'],
-            path: '/{pkg}',
-            config: {
-              auth: 'simple',
-              payload: {
-                maxBytes: 104857600,
-                output: 'stream',
-                // allow: 'multipart/form-data', // important
-                parse: true
-              }
-            },
-            handler: (request, reply) => {
-              const payload = request.payload
-              const inputDir = `/data/incoming/${process.hrtime().join('-')}`
-              const success = (response) => {
-                cleanup(inputDir);
-                reply({status: 'ok'})
-              }
-              const error = (response) => {
-                console.error("Error Encountered")
-                console.error(response)
-                cleanup(inputDir);
-                reply({status: 'error'})
-              }
-              if (debug) {
-                console.log("Received request", request.path)
-              }
-              try {
-                  fs.mkdir(inputDir, dirMode, function (err) {
-                      if (err) {
-                          console.error(`Failed to create temporary directory - ${err}`)
-                          return
-                      }
-                      var file = fs.createWriteStream(`${inputDir}/${request.params.pkg}`)
-                      payload.pipe(file)
+        await server.register(Basic);
 
-                      file.on('finish', () => {
-                        this.updateRepo(inputDir).then(success).catch(error)
-                      })
-                  }.bind(this))
-              } catch (e) {
-                  error(e);
-              }
+        server.auth.strategy('simple', 'basic', { validate: auth.validate });
+
+        server.route({
+          method: ['PUT', 'POST'],
+          path: '/{pkg}',
+          config: {
+            auth: 'simple',
+            payload: {
+              maxBytes: 104857600,
+              output: 'stream',
+              // allow: 'multipart/form-data', // important
+              parse: true
             }
-          })
+          },
+          handler: async (request, h) => {
+            const payload = request.payload
+            const inputDir = `/data/incoming/${process.hrtime().join('-')}`
+            const success = async (response) => {
+              await cleanup(inputDir);
+              return {status: 'ok'}
+            }
+            const error = async (response) => {
+              console.error("Error Encountered", response)
+              await cleanup(inputDir);
+              return {status: 'error'}
+            }
+            log("Received request", request.path)
+
+            return fsa.mkdir(inputDir, dirMode)
+            .then(() => new Promise((resolve) => {
+              if (debug) {
+                log('Saving uploaded file')
+              }
+              const tmpPath = `${inputDir}/${request.params.pkg}`
+              const file = fs.createWriteStream(tmpPath)
+              payload.pipe(file)
+              file.on('finish', () => {
+                log(`File uploaded: ${tmpPath}`)
+                resolve(inputDir)
+              })
+            }))
+            .then(this.updateRepo.bind(this))
+            .then(success)
+            .catch(error)
+          }
         })
 
         // Start the server
-        server.start((err) => {
+        await server.start((err) => {
           if (err) {
             throw err
           }
@@ -188,9 +187,10 @@ class UpdateServer {
 }
 
 try {
-  const userConfig = require('/data/conf/config.json')
-  const updateServer = new UpdateServer(userConfig);
-  updateServer.start();
+  userConfig = require(process.env.CONFIG_FILE || '/data/conf/config.json')
+  const updateServer = new UpdateServer(userConfig)
+  log('Starting server')
+  updateServer.start().then(() => {})
 } catch (e) {
-  console.error(e);
+  console.error(e)
 }
