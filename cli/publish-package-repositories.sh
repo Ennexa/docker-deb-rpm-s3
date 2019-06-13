@@ -14,16 +14,16 @@ cat << EOF
     also signed to prevent tampering.
 
     You will be prompted once for the GPG signing key's password. If the
-    PASS environment variable is set then that value will be used and you
+    GPG_PASSPHRASE environment variable is set then that value will be used and you
     will not be prompted.
 
   Options:
-    --aws-access-key=AWS_ACCESS_KEY  Required. AWS access key. Alternatively,
-                                     AWS_ACCESS_KEY may be set as an environment
+    --aws-access-key=AWS_ACCESS_KEY_ID  Required. AWS access key. Alternatively,
+                                     AWS_ACCESS_KEY_ID may be set as an environment
                                      variable.
 
-    --aws-secret-key=AWS_SECRET_KEY  Required. AWS secret key. Alternatively,
-                                     AWS_SECRET_KEY may be set as an environment
+    --aws-secret-key=AWS_SECRET_ACCESS_KEY  Required. AWS secret key. Alternatively,
+                                     AWS_SECRET_ACCESS_KEY may be set as an environment
                                      variable.
 
     -b=BUCKET | --bucket=BUCKET      Required. The S3 bucket in which to publish.
@@ -38,6 +38,8 @@ cat << EOF
                                      repositories.
 
     -g=GPG_KEY | --gpg-key=GPG_KEY   Optional. Path to GPG key file to import.
+
+    -k=GPG_KEY_ID | --gpg-key-id=GPG_KEY_ID   Optional. Default key id.
 
     -o=ORIGIN | --origin=ORIGIN      Optional. Origin to use in APT repo metadata.
 
@@ -67,11 +69,11 @@ parseArgs() {
   do
   case $i in
     --aws-access-key=*)
-      AWS_ACCESS_KEY="${i#*=}"
+      AWS_ACCESS_KEY_ID="${i#*=}"
       shift
       ;;
     --aws-secret-key=*)
-      AWS_SECRET_KEY="${i#*=}"
+      AWS_SECRET_ACCESS_KEY="${i#*=}"
       shift
       ;;
     -b=*|--bucket=*)
@@ -103,7 +105,7 @@ parseArgs() {
       shift
       ;;
     -k=*|--key=*)
-      KEY_ID="${i#*=}"
+      GPG_KEY_ID="${i#*=}"
       shift
       ;;
     -v|--verbose)
@@ -138,13 +140,13 @@ parseArgs() {
   #   exit 1
   # fi
 
-  if [ -z "$AWS_ACCESS_KEY" ]; then
-    err "--access-key-id=AWS_ACCESS_KEY is required."
+  if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    err "--access-key-id=AWS_ACCESS_KEY_ID is required."
     exit 1
   fi
 
-  if [ -z "$AWS_SECRET_KEY" ]; then
-    err "--secret-access-key-id=AWS_SECRET_KEY is required."
+  if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+    err "--secret-access-key-id=AWS_SECRET_ACCESS_KEY is required."
     exit 1
   fi
 
@@ -171,21 +173,23 @@ parseArgs() {
     VERBOSE_RPM_S3="-vv"
   fi
   
-  if [ -z "$KEY_ID" ]; then
-      KEY_ID=""
+  if [ -z "$GPG_KEY_ID" ]; then
+      GPG_KEY_ID=""
   fi
 
   export BUCKET
   export ORIGIN 
   export BASE_PATH
   export AWS_REGION
-  export AWS_ACCESS_KEY
-  export AWS_SECRET_KEY
+  export AWS_ACCESS_KEY_ID
+  export AWS_SECRET_ACCESS_KEY
   export VISIBILITY_DEB_S3
   export VISIBILITY_RPM_S3
   export VERBOSE_DEB_S3
   export VERBOSE_RPM_S3
-  export KEY_ID
+  export GPG_KEY_ID
+
+  env
   
 }
 
@@ -197,30 +201,30 @@ importGpg() {
     fi
 
     debug "Importing GPG key $GPG_KEY"
-    gpg --import --allow-secret-key-import "$GPG_KEY" | true
+    expect $SDIR/gpg-import.expect "$GPG_KEY"
   else
     debug "Not importing a GPG key because --gpg-key not specified."
   fi
 }
 
 getPassword() {
-  if [ -z "$PASS" ]; then
+  if [ -z "$GPG_PASSPHRASE" ]; then
     echo -n "Enter GPG pass phrase: "
-    read -s PASS
+    read -s GPG_PASSPHRASE
   fi
 
-  export PASS
+  export GPG_PASSPHRASE
 }
 
 signDebianPackages() {
   debug "Entering signDebianPackages"
-  find $DIRECTORY -name '*.deb' | xargs -r expect $SDIR/debsign.expect
+  find $DIRECTORY -name '*.deb' | xargs -r -I{} -n1 $SDIR/deb-sign {} "${GPG_KEY_ID}"
   debug "Exiting signDebianPackages"
 }
 
 signRpmPackages() {
   debug "Entering signRpmPackages"
-  find $DIRECTORY -name '*.rpm' | xargs -r expect $SDIR/rpmsign.expect
+  find $DIRECTORY -name '*.rpm' | xargs -r -I{} -n1 $SDIR/rpm-sign {} "${GPG_KEY_ID}"
   debug "Exiting signRpmPackages"
 }
 

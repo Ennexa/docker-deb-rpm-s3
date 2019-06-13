@@ -1,0 +1,31 @@
+#!/usr/bin/expect -f
+set timeout 10
+
+set PACKAGE [lindex $argv 0]
+set GPG_KEY_ID [lindex $argv 1]
+set GPG_PASSPHRASE $env(GPG_PASSPHRASE)
+
+if {[llength $argv] == 0} {
+  send_user "Usage: ./sign <deb_package> <gpg_id>\n"
+  send_user "Set password in PASS environment variable prior to \nrunning this expect script.\n"
+  exit 1
+}
+
+spawn rpmsign --resign $PACKAGE --define "_signature gpg" --define "_gpg_name $GPG_KEY_ID" --define "__gpg_sign_cmd %{__gpg} gpg --force-v3-sigs --verbose --no-armor --pinentry-mode=loopback --no-secmem-warning --default-key $GPG_KEY_ID -sbo %{__signature_filename} --digest-algo sha512 %{__plaintext_filename}"
+
+expect {
+  timeout { send_user "\nTimeout signing $PACKAGE\n"; exit 1 }
+  "Enter passphrase: " {
+    sleep 2
+    send -- "$GPG_PASSPHRASE\r"
+    exp_continue
+  }
+  "rpm.sig' exists. Overwrite" {
+    send -- "y"
+    exp_continue
+  }
+}
+
+#expect -exact "Enter pass phrase: "
+#send -- "$GPG_PASSPHRASE\r"
+#expect eof

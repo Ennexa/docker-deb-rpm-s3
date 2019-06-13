@@ -1,0 +1,26 @@
+#!/usr/bin/expect -f
+set timeout 10
+
+set PACKAGE [lindex $argv 0]
+set GPG_KEY_ID [lindex $argv 1]
+set GPG_PASSPHRASE $env(GPG_PASSPHRASE)
+
+if {[llength $argv] == 0} {
+  send_user "Usage: ./sign <deb_package> <gpg_id>\n"
+  send_user "Set password in PASS environment variable prior to \nrunning this expect script.\n"
+  exit 1
+}
+
+spawn dpkg-sig --verbose --sign builder -k $GPG_KEY_ID -g "--digest-algo=SHA512 --pinentry-mode=loopback" $PACKAGE
+
+expect {
+  timeout { send_user "\nTimeout signing $PACKAGE\n"; exit 1 }
+  "Enter passphrase: " {
+    sleep 2
+    send -- "$GPG_PASSPHRASE\r"
+    exp_continue
+  }
+  "Signed deb" {
+    exp_continue
+  }
+}
