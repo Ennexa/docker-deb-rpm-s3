@@ -104,7 +104,7 @@ parseArgs() {
       PREFIX="${i#*=}"
       shift
       ;;
-    -k=*|--key=*)
+    -k=*|--gpg-key-id=*)
       GPG_KEY_ID="${i#*=}"
       shift
       ;;

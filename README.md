@@ -17,7 +17,7 @@ Run the container
 
 ```
 docker run -it --rm \
-  --env="PASS=<gpg key password>" \
+  --env="GPG_PASSPHRASE=<gpg key password>" \
   --volume `pwd`:/data \
   ennexa/deb-rpm-s3 \
   --bucket=<amazon s3 bucket> \
@@ -51,7 +51,7 @@ services:
             - AWS_SECRET_KEY=<aws secret key>
             - BUCKET=<bucket name>
             - PREFIX=<prefix for s3 bucket>
-            - PASS=<gpg key password>
+            - GPG_PASSPHRASE=<gpg key password>
         ports:
             - 8000:8000
 
@@ -61,7 +61,7 @@ To start the server run
 
     docker-compose up
 
-The GPG key for signing should be named as `gpgkey.asc` and placed under `./conf` directory. The `PASS` environment variable is not required if the key is unencrpted.
+The GPG key for signing should be named as `gpgkey.asc` and placed under `./conf` directory. The `GPG_PASSPHRASE` environment variable is not required if the key is unencrpted.
 
 #### Upload package
 

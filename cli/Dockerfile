@@ -5,11 +5,15 @@ FROM debian:stretch-slim
 
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends \
-    rubygems rpm curl dpkg-sig expect yum \
+    rubygems rpm curl dpkg-sig expect yum git \
     python-deltarpm python-pip python-setuptools
 
 # Install deb-s3
-RUN gem install deb-s3
+#RUN gem install deb-s3
+RUN git clone https://github.com/Ennexa/deb-s3 /opt/deb-s3 && \
+	cd /opt/deb-s3 && \
+	gem install bundler && bundle install &&\
+	ln -s /opt/deb-s3/bin/deb-s3 /usr/bin/deb-s3
 
 # Install rpm-s3
 RUN pip install wheel && pip install sa-rpm-s3
@@ -22,6 +26,7 @@ ADD deb-sign.expect /deb-sign
 ADD rpm-sign.expect /rpm-sign
 ADD deb-s3.expect /
 ADD rpm-s3.expect /
+ADD gpg-import.expect /
 ADD publish-package-repositories.sh /
 
 # Execute the publish-package-repositories.sh when the container

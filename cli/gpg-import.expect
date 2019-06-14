@@ -1,20 +1,18 @@
 #!/usr/bin/expect -f
 
-# Expect wrapper for 'dpkg-sig --sign' that provides the GPG signing password
-# when prompted.
+# Expect wrapper for importing the GPG private key
 #
-# Set password in PASS environment variable prior to running
+# Set password in GPG_PASSPHRASE environment variable prior to running
 # this expect script.
-#
-# Example usage:
-#  expect debsign.expect example.deb
-#
-#  expect debsign.expect example.deb other.deb
 
-spawn gpg --import --allow-secret-key-import {*}$argv
+set GPG_KEY_FILE [lindex $argv 0]
+set GPG_PASSPHRASE $env(GPG_PASSPHRASE)
+
+spawn gpg --import --pinentry-mode=loopback --allow-secret-key-import $GPG_KEY_FILE
 expect {
-  "Passphrase: " {
-    send -- "$env(PASS)\r"
+  "Enter passphrase: " {
+    sleep 1
+    send -- "$GPG_PASSPHRASE\r"
     exp_continue
   }
 }

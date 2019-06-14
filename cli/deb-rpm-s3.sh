@@ -5,7 +5,7 @@
 #
 # You must set AWS_ACCESS_KEY and AWS_SECRET_KEY in your environment prior to
 # running. You can optionally pass the GPG key's passphrase as the environment
-# variable PASS.
+# variable GPG_PASSPHRASE.
 #
 
 cd "$(dirname "$0")"
@@ -30,7 +30,7 @@ gpg_key="/beats-packer/dev-tools/packer/docker/deb-rpm-s3/elasticsearch.asc"
 origin=Elastic
 
 docker run -it --rm \
-  --env="PASS=$PASS" \
+  --env="GPG_PASSPHRASE=$GPG_PASSPHRASE" \
   --volume %cd%:/data \
   deb-rpm-s3 \
   --bucket=$bucket \

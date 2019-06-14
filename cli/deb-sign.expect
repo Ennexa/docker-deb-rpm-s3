@@ -7,7 +7,7 @@ set GPG_PASSPHRASE $env(GPG_PASSPHRASE)
 
 if {[llength $argv] == 0} {
   send_user "Usage: ./sign <deb_package> <gpg_id>\n"
-  send_user "Set password in PASS environment variable prior to \nrunning this expect script.\n"
+  send_user "Set password in GPG_PASSPHRASE environment variable prior to \nrunning this expect script.\n"
   exit 1
 }
 

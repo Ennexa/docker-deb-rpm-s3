@@ -16,7 +16,7 @@ spawn deb-s3 upload \
         {*}$argv
 expect {
   "Enter passphrase: " {
-    send -- "$env(PASS)\r"
+    send -- "$env(GPG_PASSPHRASE)\r"
     exp_continue
   }
 }

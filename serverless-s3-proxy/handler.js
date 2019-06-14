@@ -130,6 +130,17 @@ module.exports.index = function (event, context, callback) {
         Prefix: prefix
     }
 
+    if (config.index === false) {
+        callback(null, {
+            statusCode: 404,
+            body: 'Not found',
+            headers: {
+                'Content-Type': 'text/plain'
+            }
+        });
+        return
+    }
+
     s3.listObjects(params, function (err, data) {
         if (err) throw err;
         const len = prefix.length;

@@ -17,7 +17,7 @@ spawn rpm-s3 \
         {*}$argv
 expect {
   "Enter passphrase: " {
-    send -- "$env(PASS)\r"
+    send -- "$env(GPG_PASSPHRASE)\r"
     exp_continue
   }
 }

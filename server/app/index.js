@@ -168,7 +168,11 @@ class UpdateServer {
           this.config[key] = userConfig[key]
         }
         
-        ['bucket', 'directory', 'prefix', 'gpg-key', 'aws-access-key', 'aws-secret-key', 'verbose', 'visibility'].forEach((opt) => {
+        [
+          'b', 'd', 'p', 'g', 'k', 'o',
+          'bucket', 'directory', 'prefix', 'gpg-key', 'gpg-key-id', 'origin',
+          'aws-access-key', 'aws-secret-key', 'verbose', 'visibility'
+        ].forEach((opt) => {
           let val = opt in this.config.args ? this.config.args[opt] : process.env[opt.replace(/-/g, '_').toUpperCase()]
           let type = typeof val
           if (type === 'boolean') {
