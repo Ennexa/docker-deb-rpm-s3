@@ -10,10 +10,9 @@ RUN apt-get install -y --no-install-recommends \
 
 # Install deb-s3
 #RUN gem install deb-s3
-RUN git clone https://github.com/Ennexa/deb-s3 /opt/deb-s3 && \
-	cd /opt/deb-s3 && \
-	gem install bundler && bundle install &&\
-	ln -s /opt/deb-s3/bin/deb-s3 /usr/bin/deb-s3
+RUN curl -sLO https://github.com/deb-s3/deb-s3/releases/download/0.11.3/deb-s3-0.11.3.gem && \
+    gem install deb-s3-0.11.3.gem && \
+    rm -f deb-s3-0.11.3.gem
 
 # Install rpm-s3
 RUN pip install wheel && pip install sa-rpm-s3
